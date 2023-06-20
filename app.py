@@ -8,15 +8,15 @@ from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
 from io import BytesIO
+import requests
 
 
-def get_pdf_text(pdf_docs):
-    text = ""
-    for pdf in pdf_docs:
-        with BytesIO(pdf.read()) as f:
-            pdf_reader = PdfReader(f)
-            for page in pdf_reader.pages:
-                text += page.extract_text()
+def get_api_data(api_url):
+    response = requests.get(api_url)
+    data = response.json()  # assuming the API returns JSON data
+    # process the data as required
+    # for example, if the data is a list of dictionaries and you're interested in a specific field
+    text = ' '.join([item['field_of_interest'] for item in data])
     return text
 
 
@@ -75,14 +75,12 @@ def main():
         handle_userinput(user_question)
 
     with st.sidebar:
-        st.subheader("Your documents")
-        pdf_docs = st.file_uploader(
-            "Upload your PDFs here and click on 'Process'", accept_multiple_files=True
-        )
+        st.subheader("Your data source")
+        api_url = st.text_input("Enter the API URL:")
         if st.button("Process"):
             with st.spinner("Processing"):
-                # get pdf text
-                raw_text = get_pdf_text(pdf_docs)
+                # get API data
+                raw_text = get_api_data(api_url)
 
                 # get the text chunks
                 text_chunks = get_text_chunks(raw_text)
