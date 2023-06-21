@@ -14,6 +14,7 @@ import requests
 def get_api_data(api_url):
     response = requests.get(api_url)
     data = response.json()  # assuming the API returns JSON data
+    # Look into API chains on LangChain
     # process the data as required
     # for example, if the data is a list of dictionaries and you're interested in a specific field
     text = ' '.join([item['field_of_interest'] for item in data])
