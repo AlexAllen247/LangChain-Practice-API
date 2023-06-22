@@ -7,17 +7,25 @@ from langchain.chat_models import ChatOpenAI
 from langchain.memory import ConversationBufferMemory
 from langchain.chains import ConversationalRetrievalChain
 from htmlTemplates import css, bot_template, user_template
-from io import BytesIO
 import requests
+import json
 
 
-def get_api_data(api_url):
-    response = requests.get(api_url)
-    data = response.json()  # assuming the API returns JSON data
-    # Look into API chains on LangChain
-    # process the data as required
-    # for example, if the data is a list of dictionaries and you're interested in a specific field
-    text = ' '.join([item['field_of_interest'] for item in data])
+def search_foods(api_key, query, pageSize=25):
+    url = f"https://api.nal.usda.gov/fdc/v1/foods/search?api_key={api_key}"
+    response = requests.post(url, json={"query": query, "pageSize": pageSize})
+    data = json.loads(response.text)
+    return data
+
+def get_api_data(query):
+    api_key = "DEMO_KEY"
+    data = search_foods(api_key, query)
+    print(data)
+
+    # process the data into natural language-like format
+    text = ""
+    for item in data["foods"]:
+        text += f"Food: {item['description']}. Nutrients: {', '.join([nutrient['nutrientName'] for nutrient in item['foodNutrients']])}.\n"
     return text
 
 
@@ -62,7 +70,9 @@ def handle_userinput(user_question):
 
 def main():
     load_dotenv()
-    st.set_page_config(page_title="Chat with multiple PDFs", page_icon=":books:")
+    st.set_page_config(
+        page_title="Chat with USDA FoodData Central", page_icon=":books:"
+    )
     st.write(css, unsafe_allow_html=True)
 
     if "conversation" not in st.session_state:
@@ -70,27 +80,25 @@ def main():
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = None
 
-    st.header("Chat with multiple PDFs :books:")
-    user_question = st.text_input("Ask a question about your documents:")
+    st.header("Chat with USDA FoodData Central :books:")
+    user_question = st.text_input("Ask a question about the food database:")
+
+    if st.button("Process"):
+        with st.spinner("Processing"):
+            # get API data
+            raw_text = get_api_data(user_question)
+
+            # get the text chunks
+            text_chunks = get_text_chunks(raw_text)
+
+            # create vector store
+            vectorstore = get_vectorstore(text_chunks)
+
+            # create conversation chain
+            st.session_state.conversation = get_conversation_chain(vectorstore)
+
     if user_question:
         handle_userinput(user_question)
-
-    with st.sidebar:
-        st.subheader("Your data source")
-        api_url = st.text_input("Enter the API URL:")
-        if st.button("Process"):
-            with st.spinner("Processing"):
-                # get API data
-                raw_text = get_api_data(api_url)
-
-                # get the text chunks
-                text_chunks = get_text_chunks(raw_text)
-
-                # create vector store
-                vectorstore = get_vectorstore(text_chunks)
-
-                # create conversation chain
-                st.session_state.conversation = get_conversation_chain(vectorstore)
 
 
 if __name__ == "__main__":
