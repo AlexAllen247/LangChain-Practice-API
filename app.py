@@ -17,6 +17,7 @@ def search_foods(api_key, query, pageSize=25):
     data = json.loads(response.text)
     return data
 
+
 def get_api_data(query):
     api_key = "DEMO_KEY"
     data = search_foods(api_key, query)
@@ -97,8 +98,7 @@ def main():
             # create conversation chain
             st.session_state.conversation = get_conversation_chain(vectorstore)
 
-    if user_question:
-        handle_userinput(user_question)
+            handle_userinput(user_question)
 
 
 if __name__ == "__main__":
